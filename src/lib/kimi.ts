@@ -1,6 +1,6 @@
 import type { AiSummary } from "@/types";
 
-const KIMI_API_KEY = process.env.KIMI_API_KEY || "sk-CcQhYU9K0AKgmd016qupOQCIDNw4JnbAZ3Up4Fg2qj2QiVTv";
+const KIMI_API_KEY = process.env.KIMI_API_KEY;
 const KIMI_BASE_URL = process.env.KIMI_BASE_URL || "https://api.moonshot.cn/v1";
 const TIMEOUT_MS = 30_000;
 
