@@ -9,6 +9,7 @@ const EXAMPLES = ["garrytan/gstack", "anthropics/prompt-eng-interactive-tutorial
 
 const LEARNING_PATH = [
   { name: "Hooks", label: "基础", href: "/learn/hook" },
+  { name: "Rules", label: "规范", href: "/learn/rule" },
   { name: "Commands", label: "进阶", href: "/learn/command" },
   { name: "Skills", label: "核心", href: "/learn/skill" },
   { name: "MCP", label: "扩展", href: "/learn/mcp" },
@@ -32,7 +33,7 @@ export default function HomePage() {
       .catch(() => {});
   }, []);
 
-  const handleAnalyze = async () => {
+  const handleAnalyze = async (forceReanalyze = false) => {
     const trimmed = address.trim();
     if (!trimmed) {
       setError("请输入仓库地址");
@@ -52,7 +53,7 @@ export default function HomePage() {
       const res = await fetch("/api/analyze", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ address: trimmed }),
+        body: JSON.stringify({ address: trimmed, force: forceReanalyze || undefined }),
       });
 
       if (!res.ok) {
@@ -94,14 +95,14 @@ export default function HomePage() {
               setAddress(e.target.value);
               setError("");
             }}
-            onKeyDown={(e) => e.key === "Enter" && !loading && handleAnalyze()}
+            onKeyDown={(e) => { if (e.key === "Enter" && !loading) handleAnalyze(); }}
             placeholder="owner/repo"
             className="flex-1 bg-transparent border-b border-border dark:border-border light:border-light-border font-mono text-sm text-text-primary dark:text-text-primary light:text-light-text-primary focus:outline-none focus:border-accent-blue py-1 placeholder:text-text-muted dark:placeholder:text-text-muted light:placeholder:text-light-text-muted"
             aria-label="输入 GitHub 仓库地址"
             disabled={loading}
           />
           <button
-            onClick={handleAnalyze}
+            onClick={() => handleAnalyze()}
             disabled={loading}
             className="font-mono text-sm px-3 py-1 bg-bg-tertiary dark:bg-bg-tertiary light:bg-light-bg-tertiary border border-border dark:border-border light:border-light-border rounded hover:border-accent-blue transition-colors disabled:opacity-50 text-text-primary dark:text-text-primary light:text-light-text-primary"
           >
@@ -188,18 +189,57 @@ export default function HomePage() {
           </div>
           <div className="space-y-2">
             {recentRepos.map((repo) => (
-              <Link
+              <div
                 key={repo.slug}
-                href={`/repo/${repo.slug}`}
-                className="block px-4 py-2 border border-border dark:border-border light:border-light-border rounded hover:border-accent-blue transition-colors"
+                className="flex items-center gap-2 px-4 py-2 border border-border dark:border-border light:border-light-border rounded hover:border-accent-blue transition-colors"
               >
-                <div className="font-mono text-sm text-accent-blue">
-                  {repo.owner}/{repo.repo}
-                </div>
-                <div className="font-mono text-xs text-text-muted dark:text-text-muted light:text-light-text-muted mt-0.5">
-                  {formatSkillCount(repo.skillCount)}
-                </div>
-              </Link>
+                <Link
+                  href={`/repo/${repo.slug}`}
+                  className="flex-1 min-w-0"
+                >
+                  <div className="font-mono text-sm text-accent-blue">
+                    {repo.owner}/{repo.repo}
+                  </div>
+                  <div className="font-mono text-xs text-text-muted dark:text-text-muted light:text-light-text-muted mt-0.5">
+                    {formatSkillCount(repo.skillCount)}
+                  </div>
+                </Link>
+                <button
+                  onClick={async () => {
+                    setError("");
+                    setLoading(true);
+                    setStep(1);
+                    try {
+                      const res = await fetch("/api/analyze", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ address: `${repo.owner}/${repo.repo}`, force: true }),
+                      });
+                      if (!res.ok) {
+                        const data = await res.json();
+                        throw new Error(data.error || "重新分析失败");
+                      }
+                      setStep(3);
+                      const data = await res.json();
+                      fetch("/api/ai-summary", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ slug: data.analysis.slug }),
+                      }).catch(() => {});
+                      router.push(`/repo/${data.analysis.slug}`);
+                    } catch (err) {
+                      setError(err instanceof Error ? err.message : "重新分析失败");
+                      setLoading(false);
+                      setStep(0);
+                    }
+                  }}
+                  disabled={loading}
+                  className="shrink-0 font-mono text-xs px-2 py-1 border border-border dark:border-border light:border-light-border rounded hover:border-accent-orange hover:text-accent-orange transition-colors text-text-muted disabled:opacity-50"
+                  title="重新分析"
+                >
+                  重新分析
+                </button>
+              </div>
             ))}
           </div>
         </div>
@@ -227,5 +267,6 @@ function formatSkillCount(count: Record<string, number>): string {
   if (count.mcp) parts.push(`${count.mcp} MCP`);
   if (count.agent) parts.push(`${count.agent} Agents`);
   if (count.command) parts.push(`${count.command} Commands`);
+  if (count.rule) parts.push(`${count.rule} Rules`);
   return parts.join(" · ") || "无技能文件";
 }

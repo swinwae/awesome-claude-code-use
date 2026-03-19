@@ -20,6 +20,7 @@ export default function RepoDetailPage({
   const [error, setError] = useState("");
   const [categoryFilter, setCategoryFilter] = useState<SkillCategory | "all">("all");
   const [installStatus, setInstallStatus] = useState<InstallStatus | null>(null);
+  const [reanalyzing, setReanalyzing] = useState(false);
 
   useEffect(() => {
     // Load analysis
@@ -109,6 +110,46 @@ export default function RepoDetailPage({
             {analysis.owner}/{analysis.repo}
           </h1>
         </div>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={async () => {
+              setReanalyzing(true);
+              setError("");
+              try {
+                const res = await fetch("/api/analyze", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ address: slug.replace("-", "/"), force: true }),
+                });
+                if (!res.ok) throw new Error("重新分析失败");
+                const data = await res.json();
+                setAnalysis(data.analysis);
+                // Refresh AI summary
+                setAiSummary(null);
+                setAiLoading(true);
+                fetch("/api/ai-summary", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ slug }),
+                })
+                  .then((r) => r.json())
+                  .then((d) => {
+                    if (d.summary) setAiSummary(d.summary);
+                    else setAiError(d.error || "生成失败");
+                  })
+                  .catch(() => setAiError("AI 摘要加载失败"))
+                  .finally(() => setAiLoading(false));
+              } catch (err) {
+                setError(err instanceof Error ? err.message : "重新分析失败");
+              } finally {
+                setReanalyzing(false);
+              }
+            }}
+            disabled={reanalyzing}
+            className="font-mono text-xs px-2 py-1 border border-border dark:border-border light:border-light-border rounded hover:border-accent-orange hover:text-accent-orange transition-colors text-text-muted disabled:opacity-50"
+          >
+            {reanalyzing ? "分析中..." : "重新分析"}
+          </button>
         {installStatus && (
           <span
             className={`font-mono text-xs px-2 py-1 rounded ${
@@ -126,6 +167,7 @@ export default function RepoDetailPage({
                 : "未安装"}
           </span>
         )}
+        </div>
       </div>
 
       {/* AI Summary */}
@@ -214,7 +256,7 @@ export default function RepoDetailPage({
             技能列表
           </h2>
           <div className="flex gap-1 font-mono text-xs">
-            {(["all", "skill", "hook", "mcp", "agent", "command"] as const).map(
+            {(["all", "skill", "hook", "mcp", "agent", "command", "rule"] as const).map(
               (cat) => (
                 <button
                   key={cat}

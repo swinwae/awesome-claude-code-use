@@ -1,11 +1,11 @@
 import { NextResponse } from "next/server";
-import { validateRepoAddress, cloneRepo } from "@/lib/analyzer/git";
+import { validateRepoAddress, cloneRepo, pullRepo } from "@/lib/analyzer/git";
 import { analyzeRepoFiles } from "@/lib/analyzer";
-import { getCachedAnalysis, saveAnalysis } from "@/lib/cache";
+import { getCachedAnalysis, saveAnalysis, deleteAiSummary } from "@/lib/cache";
 
 export async function POST(request: Request) {
   try {
-    const { address } = await request.json();
+    const { address, force } = await request.json();
 
     if (!address || typeof address !== "string") {
       return NextResponse.json(
@@ -25,22 +25,29 @@ export async function POST(request: Request) {
     const [owner, repo] = trimmed.split("/");
     const slug = `${owner}-${repo}`;
 
-    // Check cache first
-    const cached = getCachedAnalysis(slug);
-    if (cached) {
-      return NextResponse.json({
-        analysis: cached,
-        fromCache: true,
-      });
+    // Check cache first (skip if force re-analysis)
+    if (!force) {
+      const cached = getCachedAnalysis(slug);
+      if (cached) {
+        return NextResponse.json({
+          analysis: cached,
+          fromCache: true,
+        });
+      }
     }
 
-    // Clone repo
-    const repoPath = await cloneRepo(owner, repo);
+    // Clone or pull repo
+    const repoPath = force
+      ? await pullRepo(owner, repo)
+      : await cloneRepo(owner, repo);
 
     // Analyze
     const analysis = analyzeRepoFiles(repoPath, owner, repo);
 
-    // Save cache
+    // Save cache (clear old AI summary on force re-analysis)
+    if (force) {
+      deleteAiSummary(slug);
+    }
     saveAnalysis(analysis);
 
     return NextResponse.json({

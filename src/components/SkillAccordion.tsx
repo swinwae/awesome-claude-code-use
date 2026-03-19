@@ -9,6 +9,7 @@ const CATEGORY_LABELS: Record<string, string> = {
   mcp: "MCP",
   agent: "Agent",
   command: "Command",
+  rule: "Rule",
 };
 
 export function SkillAccordion({

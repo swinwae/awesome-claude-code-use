@@ -1,4 +1,4 @@
-export type SkillCategory = "skill" | "hook" | "mcp" | "agent" | "command";
+export type SkillCategory = "skill" | "hook" | "mcp" | "agent" | "command" | "rule";
 
 export interface SkillInfo {
   name: string;
@@ -8,7 +8,7 @@ export interface SkillInfo {
   allowedTools?: string[];
   rawContent: string;
   filePath: string;
-  source: "skill-md" | "claude-md" | "hooks" | "mcp";
+  source: "skill-md" | "claude-md" | "hooks" | "mcp" | "rule-md";
 }
 
 export interface AiSummary {

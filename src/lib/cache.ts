@@ -1,4 +1,4 @@
-import { readFileSync, writeFileSync, existsSync, mkdirSync } from "fs";
+import { readFileSync, writeFileSync, existsSync, mkdirSync, unlinkSync } from "fs";
 import { join, dirname } from "path";
 import type { RepoAnalysis, RepoEntry, AiSummary, SkillAiDescription } from "@/types";
 
@@ -49,6 +49,17 @@ export function getCachedAiSummary(slug: string): AiSummary | null {
     return JSON.parse(readFileSync(path, "utf-8"));
   } catch {
     return null;
+  }
+}
+
+export function deleteAiSummary(slug: string): void {
+  const path = getAiSummaryCachePath(slug);
+  if (existsSync(path)) {
+    try {
+      unlinkSync(path);
+    } catch {
+      // ignore deletion errors
+    }
   }
 }
 

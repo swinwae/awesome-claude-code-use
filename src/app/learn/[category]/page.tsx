@@ -13,6 +13,30 @@ const CATEGORIES: {
   howTo: string;
 }[] = [
   {
+    key: "rule",
+    name: "Rules",
+    label: "规范",
+    intro:
+      "Rules 是 Claude Code 中自动附加到对话上下文的项目规范文件。与需要用户显式调用的 Skills 不同，Rules 会在每次对话开始时自动加载，用于定义项目的编码规范、行为约束和上下文规则。",
+    howTo: `在 .claude/rules/ 目录下创建 .md 文件：
+
+.claude/rules/coding-style.md:
+
+---
+description: 项目编码风格规范
+---
+
+# 编码规范
+
+- 使用 TypeScript strict 模式
+- 变量命名使用 camelCase
+- 组件命名使用 PascalCase
+- 所有异步函数必须有错误处理
+
+也支持 .cursor/rules/ 目录下的规则文件。
+Rules 会自动生效，无需手动调用。`,
+  },
+  {
     key: "hook",
     name: "Hooks",
     label: "基础",
