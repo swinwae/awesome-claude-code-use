@@ -242,7 +242,7 @@ export default function RepoDetailPage({
 
         <div className="space-y-2">
           {filteredSkills.map((skill) => (
-            <SkillAccordion key={skill.name} skill={skill} />
+            <SkillAccordion key={skill.name} skill={skill} slug={slug} />
           ))}
         </div>
       </div>

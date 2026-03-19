@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import type { SkillInfo } from "@/types";
+import { useState, useEffect, useRef } from "react";
+import type { SkillInfo, SkillAiDescription } from "@/types";
 
 const CATEGORY_LABELS: Record<string, string> = {
   skill: "Skill",
@@ -11,8 +11,47 @@ const CATEGORY_LABELS: Record<string, string> = {
   command: "Command",
 };
 
-export function SkillAccordion({ skill }: { skill: SkillInfo }) {
+export function SkillAccordion({
+  skill,
+  slug,
+}: {
+  skill: SkillInfo;
+  slug: string;
+}) {
   const [expanded, setExpanded] = useState(false);
+  const [skillDesc, setSkillDesc] = useState<SkillAiDescription | null>(null);
+  const [descLoading, setDescLoading] = useState(false);
+  const [descError, setDescError] = useState("");
+  const fetchedRef = useRef(false);
+
+  useEffect(() => {
+    if (!expanded || fetchedRef.current || descLoading) return;
+    fetchedRef.current = true;
+    setDescLoading(true);
+    setDescError("");
+
+    fetch("/api/skill-description", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ slug, skillName: skill.name }),
+    })
+      .then((r) => r.json())
+      .then((data) => {
+        if (data.description) setSkillDesc(data.description);
+        else setDescError(data.error || "生成失败");
+      })
+      .catch(() => setDescError("加载失败"))
+      .finally(() => setDescLoading(false));
+  }, [expanded, slug, skill.name, descLoading]);
+
+  function retry() {
+    fetchedRef.current = false;
+    setDescError("");
+    setDescLoading(false);
+    setSkillDesc(null);
+    // Trigger re-fetch by toggling expanded
+    setExpanded(true);
+  }
 
   return (
     <div className="border border-border dark:border-border light:border-light-border rounded-md overflow-hidden">
@@ -44,9 +83,65 @@ export function SkillAccordion({ skill }: { skill: SkillInfo }) {
 
       {expanded && (
         <div className="px-4 pb-4 pl-10 space-y-4 border-t border-border dark:border-border light:border-light-border">
-          <div className="pt-3">
+          {/* Chinese AI Description */}
+          <div className="pt-3 space-y-3">
+            {descLoading && (
+              <div className="space-y-2">
+                <div className="skeleton h-4 bg-bg-tertiary dark:bg-bg-tertiary light:bg-light-bg-tertiary rounded w-full" />
+                <div className="skeleton h-4 bg-bg-tertiary dark:bg-bg-tertiary light:bg-light-bg-tertiary rounded w-3/4" />
+                <div className="skeleton h-4 bg-bg-tertiary dark:bg-bg-tertiary light:bg-light-bg-tertiary rounded w-1/2" />
+                <p className="text-xs text-text-muted dark:text-text-muted light:text-light-text-muted">
+                  AI 生成中文描述中...
+                </p>
+              </div>
+            )}
+
+            {descError && !skillDesc && (
+              <div className="text-sm text-text-muted dark:text-text-muted light:text-light-text-muted">
+                <p>{descError}</p>
+                <button
+                  onClick={retry}
+                  className="mt-1 text-xs text-accent-blue hover:underline"
+                >
+                  重试 →
+                </button>
+              </div>
+            )}
+
+            {skillDesc && (
+              <div className="space-y-3 p-3 bg-bg-secondary dark:bg-bg-secondary light:bg-light-bg-secondary rounded-md border border-border/50">
+                <div>
+                  <h4 className="text-xs font-mono uppercase text-text-muted dark:text-text-muted light:text-light-text-muted mb-1">
+                    中文总结
+                  </h4>
+                  <p className="text-sm font-medium text-text-primary dark:text-text-primary light:text-light-text-primary">
+                    {skillDesc.summary}
+                  </p>
+                </div>
+                <div>
+                  <h4 className="text-xs font-mono uppercase text-text-muted dark:text-text-muted light:text-light-text-muted mb-1">
+                    用途与场景
+                  </h4>
+                  <p className="text-sm text-text-secondary dark:text-text-secondary light:text-light-text-secondary">
+                    {skillDesc.purpose}
+                  </p>
+                </div>
+                <div>
+                  <h4 className="text-xs font-mono uppercase text-text-muted dark:text-text-muted light:text-light-text-muted mb-1">
+                    使用方式
+                  </h4>
+                  <p className="text-sm text-text-secondary dark:text-text-secondary light:text-light-text-secondary whitespace-pre-wrap">
+                    {skillDesc.usageGuide}
+                  </p>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Original Info */}
+          <div className="pt-1">
             <h4 className="text-xs font-mono uppercase text-text-muted dark:text-text-muted light:text-light-text-muted mb-1">
-              描述
+              原始描述
             </h4>
             <p className="text-sm text-text-primary dark:text-text-primary light:text-light-text-primary">
               {skill.description}

@@ -1,6 +1,6 @@
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from "fs";
 import { join, dirname } from "path";
-import type { RepoAnalysis, RepoEntry, AiSummary } from "@/types";
+import type { RepoAnalysis, RepoEntry, AiSummary, SkillAiDescription } from "@/types";
 
 function getDataDir(): string {
   const dir = join(process.cwd(), "data");
@@ -56,6 +56,45 @@ export function saveAiSummary(slug: string, summary: AiSummary): void {
   const path = getAiSummaryCachePath(slug);
   ensureDir(path);
   writeFileSync(path, JSON.stringify(summary, null, 2));
+}
+
+// --- Skill Description Cache ---
+
+function sanitizeFileName(name: string): string {
+  return name.replace(/[\/\\:*?"<>|]/g, "_");
+}
+
+export function getCachedSkillDescription(
+  slug: string,
+  skillName: string
+): SkillAiDescription | null {
+  const path = join(
+    getDataDir(),
+    "skill-descriptions",
+    slug,
+    `${sanitizeFileName(skillName)}.json`
+  );
+  if (!existsSync(path)) return null;
+  try {
+    return JSON.parse(readFileSync(path, "utf-8"));
+  } catch {
+    return null;
+  }
+}
+
+export function saveSkillDescription(
+  slug: string,
+  skillName: string,
+  desc: SkillAiDescription
+): void {
+  const path = join(
+    getDataDir(),
+    "skill-descriptions",
+    slug,
+    `${sanitizeFileName(skillName)}.json`
+  );
+  ensureDir(path);
+  writeFileSync(path, JSON.stringify(desc, null, 2));
 }
 
 // --- Repo Index ---
