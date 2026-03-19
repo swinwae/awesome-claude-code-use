@@ -5,6 +5,7 @@ import { parseClaudeMd } from "./parsers/claude-md";
 import { parseHooksFromSettings } from "./parsers/hooks";
 import { parseMcpConfig } from "./parsers/mcp";
 import { findRuleFiles, parseRuleMd } from "./parsers/rule-md";
+import { findAgentFiles, parseAgentMd } from "./parsers/agent-md";
 import type { SkillInfo, SkillCategory, RepoAnalysis } from "@/types";
 
 export function analyzeRepoFiles(
@@ -56,6 +57,13 @@ export function analyzeRepoFiles(
   for (const f of ruleFiles) {
     const rule = parseRuleMd(f);
     if (rule) skills.push(rule);
+  }
+
+  // 6. Find and parse Agent definition files (md files with name+description frontmatter)
+  const agentFiles = findAgentFiles(repoPath);
+  for (const f of agentFiles) {
+    const agent = parseAgentMd(f);
+    if (agent) skills.push(agent);
   }
 
   // Deduplicate by name

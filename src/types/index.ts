@@ -8,7 +8,7 @@ export interface SkillInfo {
   allowedTools?: string[];
   rawContent: string;
   filePath: string;
-  source: "skill-md" | "claude-md" | "hooks" | "mcp" | "rule-md";
+  source: "skill-md" | "claude-md" | "hooks" | "mcp" | "rule-md" | "agent-md";
 }
 
 export interface AiSummary {
