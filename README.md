@@ -5,9 +5,10 @@ Claude Code 技能可视化学习平台。一个现代化的 Web 应用，用于
 ## 功能特点
 
 - **自动分析** - 输入仓库地址即可自动克隆、解析和分析
-- **多策略解析** - 支持 SKILL.md、CLAUDE.md、settings.json（Hooks）、MCP 配置等多种格式
+- **多策略解析** - 支持 SKILL.md、CLAUDE.md、settings.json（Hooks）、MCP 配置、Rules 等多种格式
 - **AI 智能摘要** - 基于 Kimi API 的智能内容理解和总结
-- **学习路径** - 从基础到高级的结构化学习：Hooks → Commands → Skills → MCP → Agents
+- **学习路径** - 从基础到高级的结构化学习：Hooks → Commands → Skills → MCP → Agents → Rules
+- **重新分析** - 支持强制拉取最新代码并重新分析，清理陈旧摘要数据
 - **一键安装** - 自动识别 Claude Code 安装状态，支持一键链接到 `~/.claude/skills/`
 - **缓存机制** - 智能缓存避免重复分析，提升性能
 - **终端风格 UI** - 暗色主题、终端式交互，极客友好的设计
@@ -66,7 +67,7 @@ awesome-claude-code-use/
 │   │   │   ├── repos/route.ts        # GET 仓库列表
 │   │   │   ├── ai-summary/route.ts   # POST AI 摘要
 │   │   │   └── install-status/route.ts # GET 安装状态
-│   │   ├── learn/[category]/page.tsx # 学习路径页面
+│   │   ├── learn/[category]/page.tsx # 学习路径页面（支持 hook/command/skill/mcp/agent/rule）
 │   │   ├── repo/[slug]/page.tsx      # 仓库详情页面
 │   │   ├── repos/page.tsx            # 仓库列表页面
 │   │   ├── layout.tsx                # 全局布局
@@ -79,7 +80,8 @@ awesome-claude-code-use/
 │   │   │       ├── skill-md.ts       # SKILL.md frontmatter 解析
 │   │   │       ├── claude-md.ts      # CLAUDE.md 解析
 │   │   │       ├── hooks.ts          # settings.json Hooks 解析
-│   │   │       └── mcp.ts            # MCP 配置解析
+│   │   │       ├── mcp.ts            # MCP 配置解析
+│   │   │       └── rule-md.ts        # Rule 文件解析（.claude/rules/, .cursor/rules/）
 │   │   ├── cache.ts                  # JSON 文件缓存管理
 │   │   ├── kimi.ts                   # Kimi API 客户端
 │   │   └── install.ts                # Claude Code 安装检测
@@ -122,19 +124,20 @@ awesome-claude-code-use/
 ### 分析流程
 
 ```
-输入仓库地址 (owner/repo)
+输入仓库地址 (owner/repo) + 可选 force 参数
   ↓
 验证格式 (正则: /^[a-zA-Z0-9._-]+\/[a-zA-Z0-9._-]+$/)
   ↓
 检查本地缓存 (data/analysis/{slug}.json)
-  ↓ (如果缓存未命中)
-Git Clone → ~/.claude/skills-repo/{owner}/{repo}/
+  ↓ (如果缓存未命中或 force=true)
+Git Clone/Pull → ~/.claude/skills-repo/{owner}/{repo}/
   ↓
 多策略文件解析：
   ├─ 递归查找 SKILL.md (深度 4，忽略 node_modules/.git/dist)
   ├─ 解析 CLAUDE.md (仓库根目录)
   ├─ 解析 Hooks (settings.json)
-  └─ 解析 MCP 配置 (mcp.json/.mcp.json)
+  ├─ 解析 MCP 配置 (mcp.json/.mcp.json)
+  └─ 解析 Rule 文件 (.claude/rules/, .cursor/rules/, .clinerules, .cursorrules)
   ↓
 去重 & 统计 (按 category)
   ↓
@@ -168,9 +171,16 @@ Git Clone → ~/.claude/skills-repo/{owner}/{repo}/
 **请求体：**
 ```json
 {
-  "address": "owner/repo"
+  "address": "owner/repo",
+  "force": false
 }
 ```
+
+**参数说明：**
+- `address` (必填) - GitHub 仓库地址 (owner/repo 格式)
+- `force` (可选，默认 false) - 是否强制重新分析
+  - `true`: 跳过缓存，拉取最新代码，清理陈旧摘要
+  - `false`: 优先使用缓存，第一次时自动克隆
 
 **响应（成功，200）：**
 ```json
@@ -183,12 +193,12 @@ Git Clone → ~/.claude/skills-repo/{owner}/{repo}/
       {
         "name": "skill_name",
         "description": "描述",
-        "category": "skill|hook|mcp|agent|command",
+        "category": "skill|hook|mcp|agent|command|rule",
         "version": "1.0.0",
         "allowedTools": ["tool1", "tool2"],
         "rawContent": "...",
         "filePath": "/path/to/file",
-        "source": "skill-md|claude-md|hooks|mcp"
+        "source": "skill-md|claude-md|hooks|mcp|rule-md"
       }
     ],
     "analyzedAt": "2024-03-19T10:00:00.000Z",
@@ -197,7 +207,8 @@ Git Clone → ~/.claude/skills-repo/{owner}/{repo}/
       "hook": 3,
       "mcp": 2,
       "agent": 1,
-      "command": 4
+      "command": 4,
+      "rule": 2
     }
   },
   "fromCache": false
@@ -223,7 +234,7 @@ Git Clone → ~/.claude/skills-repo/{owner}/{repo}/
     "owner": "owner",
     "repo": "repo",
     "analyzedAt": "2024-03-19T10:00:00.000Z",
-    "skillCount": { "skill": 5, "hook": 3, "mcp": 2, "agent": 1, "command": 4 },
+    "skillCount": { "skill": 5, "hook": 3, "mcp": 2, "agent": 1, "command": 4, "rule": 2 },
     "aiSummary": "..." // 可选
   }
 ]
@@ -269,8 +280,8 @@ Git Clone → ~/.claude/skills-repo/{owner}/{repo}/
 |------|------|------|
 | `/` | HomePage | 首页 - 终端式仓库输入 + 学习路径导航 |
 | `/repos` | ReposPage | 仓库列表 - 查看所有已分析的仓库 |
-| `/repo/[slug]` | RepoDetailPage | 仓库详情 - 技能列表、AI 摘要、源码查看 |
-| `/learn/[category]` | LearnPage | 学习路径 - 按类型过滤技能（hook/command/skill/mcp/agent）|
+| `/repo/[slug]` | RepoDetailPage | 仓库详情 - 技能列表、AI 摘要、源码查看、重新分析 |
+| `/learn/[category]` | LearnPage | 学习路径 - 按类型过滤技能（hook/command/skill/mcp/agent/rule）|
 
 ## 环境变量
 
@@ -297,12 +308,12 @@ KIMI_BASE_URL=https://api.moonshot.cn/v1
 interface SkillInfo {
   name: string;                              // 技能名称
   description: string;                       // 技能描述
-  category: "skill" | "hook" | "mcp" | "agent" | "command";
+  category: "skill" | "hook" | "mcp" | "agent" | "command" | "rule";
   version?: string;                          // 版本号
   allowedTools?: string[];                   // 允许的工具列表
   rawContent: string;                        // 原始内容
   filePath: string;                          // 源文件路径
-  source: "skill-md" | "claude-md" | "hooks" | "mcp"; // 数据源
+  source: "skill-md" | "claude-md" | "hooks" | "mcp" | "rule-md"; // 数据源
 }
 ```
 
@@ -330,7 +341,7 @@ interface RepoAnalysis {
 - **理由**：遵循 Claude Code 规范、便于管理、支持多用户
 
 ### 3. 多策略解析
-- **支持格式**：SKILL.md (frontmatter) → CLAUDE.md → settings.json (Hooks) → MCP 配置
+- **支持格式**：SKILL.md (frontmatter) → CLAUDE.md → settings.json (Hooks) → MCP 配置 → Rule 文件
 - **理由**：兼容现有 Claude 生态、灵活适配不同项目结构
 
 ### 4. AI 摘要延迟加载
@@ -338,8 +349,12 @@ interface RepoAnalysis {
 - **理由**：提升首屏性能、避免 API 超时、提高用户体验
 
 ### 5. 学习路径分层
-- **顺序**：Hooks (基础) → Commands (进阶) → Skills (核心) → MCP (扩展) → Agents (高级)
+- **顺序**：Hooks (基础) → Commands (进阶) → Skills (核心) → MCP (扩展) → Agents (高级) → Rules (规范)
 - **理由**：符合认知阶梯、降低学习曲线、结构化导学
+
+### 6. 重新分析机制
+- **设计**：支持 `force=true` 参数跳过缓存、拉取最新代码、清理陈旧摘要
+- **理由**：保证数据新鲜度、支持迭代开发、提高用户灵活性
 
 ## 开发指南
 
@@ -413,7 +428,15 @@ skills.push(...parseCustomFormat(filePath));
 3. 网络连接是否正常
 
 ### Q: 如何更新已分析的仓库？
-**A:** 删除 `data/analysis/{slug}.json` 和 `~/.claude/skills-repo/{owner}/{repo}/`，重新分析。
+**A:** 在仓库详情页点击"重新分析"按钮，或调用 API 时传入 `force: true` 参数。系统将自动拉取最新代码、清理陈旧摘要、生成新分析。
+
+### Q: Rule 文件是什么？
+**A:** Rule 是 Claude Code 规则文件，支持以下位置：
+- `.claude/rules/*.md`
+- `.cursor/rules/*.md`
+- 根目录 `.clinerules` 或 `.cursorrules` 文件
+
+系统会自动发现和解析这些文件，将其作为"rule"类型的技能展示和学习。
 
 ## 贡献指南
 
