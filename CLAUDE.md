@@ -15,6 +15,7 @@ Claude Code 技能可视化学习平台。
 - `src/lib/` - 核心库（解析器、缓存、Kimi 客户端、安装检测）
 - `src/components/` - React 组件
 - `src/types/` - TypeScript 类型
+- `docs/designs/` - 设计文档
 - `data/` - 运行时缓存数据（gitignore）
 - `setup` - 安装脚本（符号链接到 ~/.claude/skills/）
 
