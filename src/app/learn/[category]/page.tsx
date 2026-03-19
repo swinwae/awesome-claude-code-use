@@ -142,7 +142,7 @@ export default function LearnCategoryPage({
   params: Promise<{ category: string }>;
 }) {
   const { category } = use(params);
-  const [skills, setSkills] = useState<SkillInfo[]>([]);
+  const [skills, setSkills] = useState<{ skill: SkillInfo; slug: string }[]>([]);
   const [loading, setLoading] = useState(true);
 
   const categoryInfo = CATEGORIES.find((c) => c.key === category);
@@ -152,7 +152,7 @@ export default function LearnCategoryPage({
     fetch("/api/repos")
       .then((r) => r.json())
       .then(async (repos: { slug: string }[]) => {
-        const allSkills: SkillInfo[] = [];
+        const allSkills: { skill: SkillInfo; slug: string }[] = [];
         for (const repo of repos) {
           try {
             const res = await fetch("/api/analyze", {
@@ -167,7 +167,12 @@ export default function LearnCategoryPage({
               const matching = data.analysis.skills.filter(
                 (s: SkillInfo) => s.category === category
               );
-              allSkills.push(...matching);
+              allSkills.push(
+                ...matching.map((s: SkillInfo) => ({
+                  skill: s,
+                  slug: repo.slug,
+                }))
+              );
             }
           } catch {
             // Skip failed repos
@@ -268,8 +273,8 @@ export default function LearnCategoryPage({
         )}
 
         <div className="space-y-2">
-          {skills.map((skill) => (
-            <SkillAccordion key={`${skill.filePath}-${skill.name}`} skill={skill} />
+          {skills.map(({ skill, slug: repoSlug }) => (
+            <SkillAccordion key={`${skill.filePath}-${skill.name}`} skill={skill} slug={repoSlug} />
           ))}
         </div>
       </div>

@@ -37,6 +37,13 @@ export interface RepoEntry {
   aiSummary?: string;
 }
 
+export interface SkillAiDescription {
+  summary: string;
+  purpose: string;
+  usageGuide: string;
+  generatedAt: string;
+}
+
 export interface InstallStatus {
   installed: boolean;
   path?: string;
