@@ -1,0 +1,39 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+SKILLS_DIR="$HOME/.claude/skills"
+
+echo "=== Awesome Claude Code Setup ==="
+
+# Stage 1: Install dependencies
+echo "[1/3] Installing dependencies..."
+cd "$SCRIPT_DIR"
+if command -v bun &>/dev/null; then
+  bun install
+else
+  echo "Error: bun is not installed. Install it with: curl -fsSL https://bun.sh/install | bash"
+  exit 1
+fi
+
+# Stage 2: Create data directories
+echo "[2/3] Creating data directories..."
+mkdir -p "$SCRIPT_DIR/data/analysis"
+mkdir -p "$SCRIPT_DIR/data/ai-summaries"
+mkdir -p "$HOME/.claude/skills-repo"
+
+# Stage 3: Create symlinks
+echo "[3/3] Linking skills..."
+if [ -d "$SKILLS_DIR" ]; then
+  ln -snf "$SCRIPT_DIR" "$SKILLS_DIR/awesome-claude-code-use"
+  echo "  Linked: $SKILLS_DIR/awesome-claude-code-use -> $SCRIPT_DIR"
+else
+  mkdir -p "$SKILLS_DIR"
+  ln -snf "$SCRIPT_DIR" "$SKILLS_DIR/awesome-claude-code-use"
+  echo "  Created and linked: $SKILLS_DIR/awesome-claude-code-use -> $SCRIPT_DIR"
+fi
+
+echo ""
+echo "=== Setup complete ==="
+echo "Run 'bun dev' to start the development server."
+echo "Open http://localhost:3000 to use the app."
