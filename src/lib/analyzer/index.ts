@@ -4,6 +4,7 @@ import { parseSkillMd } from "./parsers/skill-md";
 import { parseClaudeMd } from "./parsers/claude-md";
 import { parseHooksFromSettings } from "./parsers/hooks";
 import { parseMcpConfig } from "./parsers/mcp";
+import { findRuleFiles, parseRuleMd } from "./parsers/rule-md";
 import type { SkillInfo, SkillCategory, RepoAnalysis } from "@/types";
 
 export function analyzeRepoFiles(
@@ -50,6 +51,13 @@ export function analyzeRepoFiles(
     }
   }
 
+  // 5. Find and parse Rule files
+  const ruleFiles = findRuleFiles(repoPath);
+  for (const f of ruleFiles) {
+    const rule = parseRuleMd(f);
+    if (rule) skills.push(rule);
+  }
+
   // Deduplicate by name
   const seen = new Set<string>();
   const uniqueSkills = skills.filter((s) => {
@@ -64,6 +72,7 @@ export function analyzeRepoFiles(
     mcp: 0,
     agent: 0,
     command: 0,
+    rule: 0,
   };
   for (const s of uniqueSkills) {
     skillCount[s.category]++;

@@ -66,6 +66,7 @@ export default function ReposPage() {
           <option value="mcp">MCP</option>
           <option value="agent">Agents</option>
           <option value="command">Commands</option>
+          <option value="rule">Rules</option>
         </select>
       </div>
 
@@ -127,5 +128,6 @@ function formatSkillCount(count: Record<string, number>): string {
   if (count.mcp) parts.push(`${count.mcp} MCP`);
   if (count.agent) parts.push(`${count.agent} Agents`);
   if (count.command) parts.push(`${count.command} Commands`);
+  if (count.rule) parts.push(`${count.rule} Rules`);
   return parts.join(" · ") || "无技能文件";
 }
