@@ -5,7 +5,7 @@ Claude Code 技能可视化学习平台。一个现代化的 Web 应用，用于
 ## 功能特点
 
 - **自动分析** - 输入仓库地址即可自动克隆、解析和分析
-- **多策略解析** - 支持 SKILL.md、CLAUDE.md、settings.json（Hooks）、MCP 配置、Rules 等多种格式
+- **多策略解析** - 支持 SKILL.md、CLAUDE.md、settings.json（Hooks）、MCP 配置、Rules、Agent 等多种格式
 - **AI 智能摘要** - 基于 Kimi API 的智能内容理解和总结
 - **学习路径** - 从基础到高级的结构化学习：Hooks → Commands → Skills → MCP → Agents → Rules
 - **重新分析** - 支持强制拉取最新代码并重新分析，清理陈旧摘要数据
@@ -81,7 +81,9 @@ awesome-claude-code-use/
 │   │   │       ├── claude-md.ts      # CLAUDE.md 解析
 │   │   │       ├── hooks.ts          # settings.json Hooks 解析
 │   │   │       ├── mcp.ts            # MCP 配置解析
-│   │   │       └── rule-md.ts        # Rule 文件解析（.claude/rules/, .cursor/rules/）
+│   │   │       ├── rule-md.ts        # Rule 文件解析（.claude/rules/, .cursor/rules/）
+│   │   │       ├── agent-md.ts       # Agent 置信度识别（多信号打分模型）
+│   │   │       └── readme-parser.ts  # README 解析（提取 agent hints）
 │   │   ├── cache.ts                  # JSON 文件缓存管理
 │   │   ├── kimi.ts                   # Kimi API 客户端
 │   │   └── install.ts                # Claude Code 安装检测
@@ -137,9 +139,11 @@ Git Clone/Pull → ~/.claude/skills-repo/{owner}/{repo}/
   ├─ 解析 CLAUDE.md (仓库根目录)
   ├─ 解析 Hooks (settings.json)
   ├─ 解析 MCP 配置 (mcp.json/.mcp.json)
-  └─ 解析 Rule 文件 (.claude/rules/, .cursor/rules/, .clinerules, .cursorrules)
+  ├─ 解析 Rule 文件 (.claude/rules/, .cursor/rules/, .clinerules, .cursorrules)
+  ├─ 解析 README.md（提取 agent hints 白名单）
+  └─ Agent 置信度识别（agents/ 目录 + README hints + frontmatter 信号打分）
   ↓
-去重 & 统计 (按 category)
+去重 & 统计 (按 category，agent 优先于 skill)
   ↓
 保存分析结果到 data/analysis/{slug}.json
   ↓
@@ -313,7 +317,8 @@ interface SkillInfo {
   allowedTools?: string[];                   // 允许的工具列表
   rawContent: string;                        // 原始内容
   filePath: string;                          // 源文件路径
-  source: "skill-md" | "claude-md" | "hooks" | "mcp" | "rule-md"; // 数据源
+  source: "skill-md" | "claude-md" | "hooks" | "mcp" | "rule-md" | "agent-md"; // 数据源
+  confidenceSource?: string;                 // Agent 识别来源（如 "agents-dir", "model+tools"）
 }
 ```
 
@@ -341,8 +346,8 @@ interface RepoAnalysis {
 - **理由**：遵循 Claude Code 规范、便于管理、支持多用户
 
 ### 3. 多策略解析
-- **支持格式**：SKILL.md (frontmatter) → CLAUDE.md → settings.json (Hooks) → MCP 配置 → Rule 文件
-- **理由**：兼容现有 Claude 生态、灵活适配不同项目结构
+- **支持格式**：SKILL.md (frontmatter) → CLAUDE.md → settings.json (Hooks) → MCP 配置 → Rule 文件 → README (agent hints) → Agent 文件 (置信度模型)
+- **理由**：兼容现有 Claude 生态、灵活适配不同项目结构、基于官方定义精准识别 agent
 
 ### 4. AI 摘要延迟加载
 - **设计**：分析时触发异步请求、自动缓存结果

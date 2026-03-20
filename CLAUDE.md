@@ -19,8 +19,10 @@ Claude Code 技能可视化学习平台。
   - `ai-client.ts` - AI 多引擎客户端（Kimi + DeepSeek fallback）
   - `analyzer/` - 仓库分析引擎
     - `git.ts` - Git 操作（`cloneRepo`、`pullRepo`）
-    - `parsers/` - 多格式解析器（SKILL.md、CLAUDE.md、Hooks、MCP、Rules）
+    - `parsers/` - 多格式解析器（SKILL.md、CLAUDE.md、Hooks、MCP、Rules、Agents）
       - `rule-md.ts` - Rule 文件解析
+      - `agent-md.ts` - Agent 置信度识别（多信号打分模型）
+      - `readme-parser.ts` - README 解析（提取 agent hints）
   - `cache.ts` - 缓存管理（含 `deleteAiSummary()`）
 - `src/components/` - React 组件
 - `src/types/` - TypeScript 类型
@@ -58,8 +60,8 @@ bun dev
 
 ### 仓库验证和解析
 - 地址正则验证：`/^[a-zA-Z0-9._-]+\/[a-zA-Z0-9._-]+$/`
-- 多策略解析顺序：SKILL.md → CLAUDE.md → Hooks → MCP → Rules
-- 去重：按 name 字段去重（同名文件取首个）
+- 多策略解析顺序：SKILL.md → CLAUDE.md → Hooks → MCP → Rules → README(agent hints) → Agents(置信度模型)
+- 去重：按 name 字段去重（agent 分类优先于 skill，其余同名取首个）
 
 ## 重新分析功能（Re-analysis）
 API 参数：`POST /api/analyze` 支持 `force` 参数
@@ -95,3 +97,24 @@ API 参数：`POST /api/analyze` 支持 `force` 参数
 - 无 Frontmatter 时，自动提取首段落（截断到 200 字）作为描述
 - 数据源标记：`source: "rule-md"`
 - category：固定为 `"rule"`
+
+## Agent 识别（置信度模型）
+基于 Claude Code 官方 agent 定义，用多信号置信度模型识别真正的 agent 文件。
+
+**置信度信号（高 → 单独即可确认，中 → 需 2 个以上组合）：**
+- 高：文件在 `agents/` 或 `.claude/agents/` 目录下
+- 高：README 中明确标记为 agent
+- 高：Frontmatter 同时包含 `model` + `color` 字段
+- 中：`model` 字段单独出现、`tools` 字段、"Use this agent when" 描述、"You are" 开头的 body
+
+**核心逻辑（`agent-md.ts`）：**
+- `findAgentCandidates()` — 两阶段扫描，优先 `agents/` 和 `.claude/agents/` 目录
+- `parseAgentMd()` — 收集信号、判定是否为 agent
+- `isAgent()` — 任一高信号 → true，2+ 中信号 → true
+- `confidenceSource` 字段记录识别来源（如 `agents-dir`、`model+tools`）
+
+**README 辅助识别（`readme-parser.ts`）：**
+- 4 种正则模式提取 agent hints：路径引用、表格标记、标题段落、关键字列表
+- 只解析根目录 README.md
+
+**`skill-md.ts` 不再通过关键字推断 agent**，统一走置信度模型。
