@@ -9,6 +9,7 @@ export interface SkillInfo {
   rawContent: string;
   filePath: string;
   source: "skill-md" | "claude-md" | "hooks" | "mcp" | "rule-md" | "agent-md";
+  confidenceSource?: string;
 }
 
 export interface AiSummary {
@@ -48,4 +49,13 @@ export interface InstallStatus {
   installed: boolean;
   path?: string;
   broken?: boolean;
+}
+
+export type SkillInstallLevel = "user" | "project";
+
+export interface SkillInstallStatus {
+  user: boolean;
+  project: boolean;
+  userPath?: string;
+  projectPath?: string;
 }
