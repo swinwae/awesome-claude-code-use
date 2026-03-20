@@ -13,10 +13,13 @@ Claude Code 技能可视化学习平台。
 ## 项目结构
 - `src/app/` - Next.js 页面和 API 路由
   - `api/analyze/route.ts` - 仓库分析 API（支持 `force` 参数）
+  - `api/install/route.ts` - Skill 安装/卸载 API
+  - `api/install-status/route.ts` - Skill 安装状态查询 API
   - `learn/[category]/page.tsx` - 学习路径页面（支持 rule 类型）
   - `repo/[slug]/page.tsx` - 仓库详情页（含重新分析按钮）
 - `src/lib/` - 核心库（解析器、缓存、AI 客户端、安装检测）
   - `ai-client.ts` - AI 多引擎客户端（Kimi + DeepSeek fallback）
+  - `install.ts` - Skill 级安装/卸载/状态检测（符号链接方式）
   - `analyzer/` - 仓库分析引擎
     - `git.ts` - Git 操作（`cloneRepo`、`pullRepo`）
     - `parsers/` - 多格式解析器（SKILL.md、CLAUDE.md、Hooks、MCP、Rules、Agents）
@@ -28,7 +31,7 @@ Claude Code 技能可视化学习平台。
 - `src/types/` - TypeScript 类型
 - `docs/designs/` - 设计文档
 - `data/` - 运行时缓存数据（gitignore）
-- `setup` - 安装脚本（符号链接到 ~/.claude/skills/）
+- `setup` - 旧版安装脚本（已被 Skill 级安装取代）
 
 ## 开发
 ```bash
@@ -38,6 +41,30 @@ bun dev
 
 ## SkillCategory 类型支持
 支持以下技能类型：`skill`、`hook`、`mcp`、`agent`、`command`、**`rule`**
+
+## Skill 级安装功能
+
+通过符号链接按需安装单个 Skill，支持两个级别：
+
+**User 级**（全局）：`~/.claude/skills/{skillName}` → `~/.claude/skills-repo/{owner}/{repo}/{skill-dir}/`
+**Project 级**（指定项目）：`{projectPath}/.claude/skills/{skillName}` → 同上
+
+**核心逻辑（`install.ts`）：**
+- `installSkill()` — 创建符号链接
+- `uninstallSkill()` — 删除符号链接（仅删除 symlink，拒绝删除真实目录）
+- `checkSkillInstallStatus()` — 检查 user/project 两级安装状态
+- `validateSkillName()` — 只允许 `[a-zA-Z0-9._-]`，防止路径穿越
+
+**API**：`POST /api/install` 接收 `{action, owner, repo, filePath, skillName, level, projectPath?}`
+
+**UI**：`SkillAccordion` 中仅对 `category=skill` 的技能显示安装区域
+
+**安全措施**：
+- skillName 正则校验（禁止 `/`、`..`）
+- source path 必须在 `~/.claude/skills-repo/` 内
+- owner/repo 格式校验
+- filePath 禁止包含 `..`
+- 卸载时 lstatSync 确认是符号链接才删除
 
 ## 关键设计决策
 
