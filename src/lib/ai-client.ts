@@ -12,21 +12,21 @@ const TIMEOUT_MS = 30_000;
 function getProviders(): AiProvider[] {
   const providers: AiProvider[] = [];
 
-  if (process.env.KIMI_API_KEY) {
-    providers.push({
-      name: "Kimi",
-      apiKey: process.env.KIMI_API_KEY,
-      baseUrl: process.env.KIMI_BASE_URL || "https://api.moonshot.cn/v1",
-      model: "moonshot-v1-8k",
-    });
-  }
-
   if (process.env.DEEPSEEK_API_KEY) {
     providers.push({
       name: "DeepSeek",
       apiKey: process.env.DEEPSEEK_API_KEY,
       baseUrl: process.env.DEEPSEEK_BASE_URL || "https://api.deepseek.com/v1",
       model: process.env.DEEPSEEK_MODEL || "deepseek-chat",
+    });
+  }
+
+  if (process.env.KIMI_API_KEY) {
+    providers.push({
+      name: "Kimi",
+      apiKey: process.env.KIMI_API_KEY,
+      baseUrl: process.env.KIMI_BASE_URL || "https://api.moonshot.cn/v1",
+      model: process.env.KIMI_MODEL || "moonshot-v1-8k",
     });
   }
 
