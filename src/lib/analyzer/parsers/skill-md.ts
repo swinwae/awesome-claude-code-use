@@ -39,7 +39,6 @@ function inferCategory(
   if (data.category) return String(data.category) as SkillInfo["category"];
   if (text.includes("hook")) return "hook";
   if (text.includes("mcp") || text.includes("server")) return "mcp";
-  if (text.includes("agent")) return "agent";
   if (text.includes("command") || text.includes("cmd")) return "command";
   return "skill";
 }
