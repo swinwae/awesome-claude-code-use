@@ -5,7 +5,8 @@ import { parseClaudeMd } from "./parsers/claude-md";
 import { parseHooksFromSettings } from "./parsers/hooks";
 import { parseMcpConfig } from "./parsers/mcp";
 import { findRuleFiles, parseRuleMd } from "./parsers/rule-md";
-import { findAgentFiles, parseAgentMd } from "./parsers/agent-md";
+import { findAgentCandidates, parseAgentMd } from "./parsers/agent-md";
+import { parseReadmeForAgents } from "./parsers/readme-parser";
 import type { SkillInfo, SkillCategory, RepoAnalysis } from "@/types";
 
 export function analyzeRepoFiles(
@@ -59,20 +60,41 @@ export function analyzeRepoFiles(
     if (rule) skills.push(rule);
   }
 
-  // 6. Find and parse Agent definition files (md files with name+description frontmatter)
-  const agentFiles = findAgentFiles(repoPath);
-  for (const f of agentFiles) {
-    const agent = parseAgentMd(f);
+  // 6. Parse README for agent hints
+  const agentHints = parseReadmeForAgents(repoPath);
+  const hintedNames = new Set(agentHints.map((h) => h.name).filter(Boolean));
+  const hintedPaths = new Set(
+    agentHints
+      .map((h) => (h.filePath ? join(repoPath, h.filePath) : null))
+      .filter(Boolean) as string[]
+  );
+
+  // 7. Find and parse Agent candidates with confidence model
+  const candidates = findAgentCandidates(repoPath);
+  for (const candidate of candidates) {
+    const isReadmeHinted =
+      hintedPaths.has(candidate.filePath) ||
+      hintedNames.has(basename(candidate.filePath, ".md"));
+
+    const agent = parseAgentMd(candidate.filePath, {
+      isInAgentsDir: candidate.isInAgentsDir,
+      isReadmeHinted,
+    });
     if (agent) skills.push(agent);
   }
 
-  // Deduplicate by name
-  const seen = new Set<string>();
-  const uniqueSkills = skills.filter((s) => {
-    if (seen.has(s.name)) return false;
-    seen.add(s.name);
-    return true;
-  });
+  // Deduplicate by name — agent takes priority over skill
+  const nameMap = new Map<string, SkillInfo>();
+  for (const s of skills) {
+    const existing = nameMap.get(s.name);
+    if (!existing) {
+      nameMap.set(s.name, s);
+    } else if (s.category === "agent" && existing.category === "skill") {
+      // Agent classification takes priority over skill
+      nameMap.set(s.name, s);
+    }
+  }
+  const uniqueSkills = Array.from(nameMap.values());
 
   const skillCount: Record<SkillCategory, number> = {
     skill: 0,
