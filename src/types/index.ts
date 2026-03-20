@@ -49,3 +49,12 @@ export interface InstallStatus {
   path?: string;
   broken?: boolean;
 }
+
+export type SkillInstallLevel = "user" | "project";
+
+export interface SkillInstallStatus {
+  user: boolean;
+  project: boolean;
+  userPath?: string;
+  projectPath?: string;
+}

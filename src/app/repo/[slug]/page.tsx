@@ -3,7 +3,6 @@
 import { useState, useEffect, use } from "react";
 import Link from "next/link";
 import { SkillAccordion } from "@/components/SkillAccordion";
-import { CopyButton } from "@/components/CopyButton";
 import type { RepoAnalysis, AiSummary, SkillCategory, InstallStatus } from "@/types";
 
 export default function RepoDetailPage({
@@ -92,8 +91,6 @@ export default function RepoDetailPage({
     categoryFilter === "all"
       ? analysis.skills
       : analysis.skills.filter((s) => s.category === categoryFilter);
-
-  const installCommand = `git clone https://github.com/${analysis.owner}/${analysis.repo}.git ~/.claude/skills/${analysis.repo} && cd ~/.claude/skills/${analysis.repo} && ./setup`;
 
   return (
     <div className="space-y-6">
@@ -236,17 +233,14 @@ export default function RepoDetailPage({
         )}
       </div>
 
-      {/* Install Command */}
+      {/* Install Guide */}
       <div className="border border-border dark:border-border light:border-light-border rounded-md p-4">
-        <div className="flex items-center justify-between mb-2">
-          <h2 className="font-mono text-xs uppercase text-text-muted dark:text-text-muted light:text-light-text-muted">
-            安装命令
-          </h2>
-          <CopyButton text={installCommand} />
-        </div>
-        <pre className="font-mono text-xs text-accent-green overflow-x-auto">
-          <code>$ {installCommand}</code>
-        </pre>
+        <h2 className="font-mono text-xs uppercase text-text-muted dark:text-text-muted light:text-light-text-muted mb-2">
+          安装方式
+        </h2>
+        <p className="text-sm text-text-secondary dark:text-text-secondary light:text-light-text-secondary">
+          通过下方技能列表中每个 Skill 的安装按钮，按需安装到 User 级（全局）或 Project 级（指定项目）。
+        </p>
       </div>
 
       {/* Skill List */}

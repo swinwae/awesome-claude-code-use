@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
-import type { SkillInfo, SkillAiDescription } from "@/types";
+import { useState, useEffect, useRef, useCallback } from "react";
+import type { SkillInfo, SkillAiDescription, SkillInstallStatus } from "@/types";
 
 const CATEGORY_LABELS: Record<string, string> = {
   skill: "Skill",
@@ -50,9 +50,13 @@ export function SkillAccordion({
     setDescError("");
     setDescLoading(false);
     setSkillDesc(null);
-    // Trigger re-fetch by toggling expanded
     setExpanded(true);
   }
+
+  // Parse owner/repo from slug (format: "owner-repo")
+  const parts = slug.split("-");
+  const owner = parts[0] || "";
+  const repo = parts.slice(1).join("-") || "";
 
   return (
     <div className="border border-border dark:border-border light:border-light-border rounded-md overflow-hidden">
@@ -139,6 +143,16 @@ export function SkillAccordion({
             )}
           </div>
 
+          {/* Install Section — only for skill category */}
+          {skill.category === "skill" && (
+            <SkillInstallSection
+              skillName={skill.name}
+              filePath={skill.filePath}
+              owner={owner}
+              repo={repo}
+            />
+          )}
+
           {/* Original Info */}
           <div className="pt-1">
             <h4 className="text-xs font-mono uppercase text-text-muted dark:text-text-muted light:text-light-text-muted mb-1">
@@ -180,6 +194,204 @@ export function SkillAccordion({
 
           <SkillRawContent content={skill.rawContent} />
         </div>
+      )}
+    </div>
+  );
+}
+
+function SkillInstallSection({
+  skillName,
+  filePath,
+  owner,
+  repo,
+}: {
+  skillName: string;
+  filePath: string;
+  owner: string;
+  repo: string;
+}) {
+  const [status, setStatus] = useState<SkillInstallStatus | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [actionLoading, setActionLoading] = useState<string | null>(null);
+  const [error, setError] = useState("");
+  const [showProjectInput, setShowProjectInput] = useState(false);
+  const [projectPath, setProjectPath] = useState("");
+  // Remember the project path used during install for uninstall
+  const [installedProjectPath, setInstalledProjectPath] = useState("");
+
+  const fetchStatus = useCallback(() => {
+    const controller = new AbortController();
+    setLoading(true);
+    fetch(`/api/install-status?skillName=${encodeURIComponent(skillName)}`, {
+      signal: controller.signal,
+    })
+      .then((r) => r.json())
+      .then(setStatus)
+      .catch((err) => {
+        if (err.name !== "AbortError") setStatus({ user: false, project: false });
+      })
+      .finally(() => setLoading(false));
+    return controller;
+  }, [skillName]);
+
+  useEffect(() => {
+    const controller = fetchStatus();
+    return () => controller.abort();
+  }, [fetchStatus]);
+
+  const doInstall = async (level: "user" | "project", path?: string) => {
+    setActionLoading(level);
+    setError("");
+    try {
+      const res = await fetch("/api/install", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "install",
+          owner,
+          repo,
+          filePath,
+          skillName,
+          level,
+          projectPath: path,
+        }),
+      });
+      const data = await res.json();
+      if (!data.success) {
+        setError(data.error || "安装失败");
+      } else {
+        if (level === "project" && path) {
+          setInstalledProjectPath(path);
+        }
+        setShowProjectInput(false);
+        setProjectPath("");
+        fetchStatus();
+      }
+    } catch {
+      setError("安装请求失败");
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const doUninstall = async (level: "user" | "project") => {
+    setActionLoading(`un-${level}`);
+    setError("");
+    try {
+      const res = await fetch("/api/install", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "uninstall",
+          skillName,
+          level,
+          projectPath: level === "project" ? installedProjectPath : undefined,
+        }),
+      });
+      const data = await res.json();
+      if (!data.success) {
+        setError(data.error || "卸载失败");
+      } else {
+        if (level === "project") setInstalledProjectPath("");
+        fetchStatus();
+      }
+    } catch {
+      setError("卸载请求失败");
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="p-3 bg-bg-secondary dark:bg-bg-secondary light:bg-light-bg-secondary rounded-md border border-border/50">
+        <div className="skeleton h-4 bg-bg-tertiary dark:bg-bg-tertiary light:bg-light-bg-tertiary rounded w-32" />
+      </div>
+    );
+  }
+
+  return (
+    <div className="p-3 bg-bg-secondary dark:bg-bg-secondary light:bg-light-bg-secondary rounded-md border border-border/50 space-y-2">
+      <h4 className="text-xs font-mono uppercase text-text-muted dark:text-text-muted light:text-light-text-muted">
+        安装
+      </h4>
+
+      <div className="flex flex-wrap items-center gap-2">
+        {/* User level */}
+        {status?.user ? (
+          <span className="inline-flex items-center gap-1.5 font-mono text-xs">
+            <span className="text-accent-green">&#10003; 已安装 (user)</span>
+            <button
+              onClick={() => doUninstall("user")}
+              disabled={actionLoading !== null}
+              className="text-accent-red/70 hover:text-accent-red hover:underline disabled:opacity-50"
+            >
+              {actionLoading === "un-user" ? "卸载中..." : "卸载"}
+            </button>
+          </span>
+        ) : (
+          <button
+            onClick={() => doInstall("user")}
+            disabled={actionLoading !== null}
+            className="font-mono text-xs px-2.5 py-1 border border-accent-blue/50 text-accent-blue rounded hover:bg-accent-blue/10 transition-colors disabled:opacity-50"
+          >
+            {actionLoading === "user" ? "安装中..." : "User 级安装"}
+          </button>
+        )}
+
+        {/* Project level */}
+        {status?.project ? (
+          <span className="inline-flex items-center gap-1.5 font-mono text-xs">
+            <span className="text-accent-green">&#10003; 已安装 (project)</span>
+            <button
+              onClick={() => doUninstall("project")}
+              disabled={actionLoading !== null}
+              className="text-accent-red/70 hover:text-accent-red hover:underline disabled:opacity-50"
+            >
+              {actionLoading === "un-project" ? "卸载中..." : "卸载"}
+            </button>
+          </span>
+        ) : showProjectInput ? (
+          <div className="flex items-center gap-1.5">
+            <input
+              type="text"
+              value={projectPath}
+              onChange={(e) => setProjectPath(e.target.value)}
+              placeholder="/path/to/your/project"
+              className="font-mono text-xs px-2 py-1 border border-border dark:border-border light:border-light-border rounded bg-bg-primary dark:bg-bg-primary light:bg-light-bg-primary text-text-primary dark:text-text-primary light:text-light-text-primary w-56"
+            />
+            <button
+              onClick={() => {
+                if (projectPath.trim()) doInstall("project", projectPath.trim());
+              }}
+              disabled={actionLoading !== null || !projectPath.trim()}
+              className="font-mono text-xs px-2 py-1 border border-accent-blue/50 text-accent-blue rounded hover:bg-accent-blue/10 transition-colors disabled:opacity-50"
+            >
+              {actionLoading === "project" ? "安装中..." : "确认"}
+            </button>
+            <button
+              onClick={() => {
+                setShowProjectInput(false);
+                setProjectPath("");
+              }}
+              className="font-mono text-xs text-text-muted hover:text-text-primary"
+            >
+              取消
+            </button>
+          </div>
+        ) : (
+          <button
+            onClick={() => setShowProjectInput(true)}
+            disabled={actionLoading !== null}
+            className="font-mono text-xs px-2.5 py-1 border border-border dark:border-border light:border-light-border text-text-secondary dark:text-text-secondary light:text-light-text-secondary rounded hover:border-accent-blue hover:text-accent-blue transition-colors disabled:opacity-50"
+          >
+            Project 级安装
+          </button>
+        )}
+      </div>
+
+      {error && (
+        <p className="text-xs text-accent-red">{error}</p>
       )}
     </div>
   );
