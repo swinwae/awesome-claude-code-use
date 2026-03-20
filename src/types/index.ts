@@ -9,6 +9,7 @@ export interface SkillInfo {
   rawContent: string;
   filePath: string;
   source: "skill-md" | "claude-md" | "hooks" | "mcp" | "rule-md" | "agent-md";
+  confidenceSource?: string;
 }
 
 export interface AiSummary {
