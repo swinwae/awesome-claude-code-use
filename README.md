@@ -6,10 +6,10 @@ Claude Code 技能可视化学习平台。一个现代化的 Web 应用，用于
 
 - **自动分析** - 输入仓库地址即可自动克隆、解析和分析
 - **多策略解析** - 支持 SKILL.md、CLAUDE.md、settings.json（Hooks）、MCP 配置、Rules 等多种格式
-- **AI 智能摘要** - 基于 Kimi API 的智能内容理解和总结
+- **AI 智能摘要** - 双引擎 AI 摘要：Kimi + DeepSeek 自动 fallback
 - **学习路径** - 从基础到高级的结构化学习：Hooks → Commands → Skills → MCP → Agents → Rules
 - **重新分析** - 支持强制拉取最新代码并重新分析，清理陈旧摘要数据
-- **一键安装** - 自动识别 Claude Code 安装状态，支持一键链接到 `~/.claude/skills/`
+- **Skill 级安装** - 按需安装单个 Skill，支持 User 级（全局）和 Project 级（指定项目）符号链接安装
 - **缓存机制** - 智能缓存避免重复分析，提升性能
 - **终端风格 UI** - 暗色主题、终端式交互，极客友好的设计
 
@@ -23,7 +23,7 @@ Claude Code 技能可视化学习平台。一个现代化的 Web 应用，用于
   curl -fsSL https://bun.sh/install | bash
   ```
 - **Git** - 用于克隆分析的仓库
-- **KIMI_API_KEY** - 用于 AI 摘要功能（可选，没有 API 密钥时功能降级）
+- **KIMI_API_KEY / DEEPSEEK_API_KEY** - 用于 AI 摘要功能（可选，没有 API 密钥时功能降级）
 
 ### 安装与运行
 
@@ -46,15 +46,14 @@ bun dev
 # 5. 打开浏览器访问 http://localhost:3000
 ```
 
-### 安装到 Claude Code
+### 安装 Skill
 
-```bash
-# 运行安装脚本，自动链接到 ~/.claude/skills/
-./setup
+在 Web 界面中，分析仓库后展开具体的 Skill，通过安装按钮按需安装：
 
-# 或手动链接
-ln -snf $(pwd) ~/.claude/skills/awesome-claude-code-use
-```
+- **User 级安装** — 符号链接到 `~/.claude/skills/{skillName}`，所有项目可用
+- **Project 级安装** — 符号链接到 `{projectPath}/.claude/skills/{skillName}`，仅指定项目可用
+
+安装按钮仅对 `skill` 类型的技能显示（具有 SKILL.md 的独立目录）。
 
 ## 项目结构
 
@@ -66,7 +65,9 @@ awesome-claude-code-use/
 │   │   │   ├── analyze/route.ts      # POST 分析仓库
 │   │   │   ├── repos/route.ts        # GET 仓库列表
 │   │   │   ├── ai-summary/route.ts   # POST AI 摘要
-│   │   │   └── install-status/route.ts # GET 安装状态
+│   │   │   ├── install/route.ts      # POST Skill 安装/卸载
+│   │   │   ├── install-status/route.ts # GET Skill 安装状态
+│   │   │   └── skill-description/route.ts # POST Skill 中文描述
 │   │   ├── learn/[category]/page.tsx # 学习路径页面（支持 hook/command/skill/mcp/agent/rule）
 │   │   ├── repo/[slug]/page.tsx      # 仓库详情页面
 │   │   ├── repos/page.tsx            # 仓库列表页面
@@ -81,10 +82,11 @@ awesome-claude-code-use/
 │   │   │       ├── claude-md.ts      # CLAUDE.md 解析
 │   │   │       ├── hooks.ts          # settings.json Hooks 解析
 │   │   │       ├── mcp.ts            # MCP 配置解析
-│   │   │       └── rule-md.ts        # Rule 文件解析（.claude/rules/, .cursor/rules/）
+│   │   │       ├── rule-md.ts        # Rule 文件解析（.claude/rules/, .cursor/rules/）
+│   │   │       └── agent-md.ts      # Agent 定义文件解析
 │   │   ├── cache.ts                  # JSON 文件缓存管理
-│   │   ├── kimi.ts                   # Kimi API 客户端
-│   │   └── install.ts                # Claude Code 安装检测
+│   │   ├── ai-client.ts             # AI 多引擎客户端（Kimi + DeepSeek fallback）
+│   │   └── install.ts                # Skill 级安装/卸载/状态检测
 │   ├── components/                   # React 组件
 │   │   ├── ThemeProvider.tsx         # 主题提供者
 │   │   ├── Nav.tsx                   # 导航栏
@@ -98,7 +100,7 @@ awesome-claude-code-use/
 │   └── ai-summaries/                 # AI 摘要缓存
 ├── docs/
 │   └── designs/                      # 设计文档
-├── setup                             # 安装脚本
+├── setup                             # 旧版安装脚本（已被 Skill 级安装取代）
 ├── package.json
 ├── tsconfig.json
 ├── next.config.ts
@@ -155,7 +157,7 @@ Git Clone/Pull → ~/.claude/skills-repo/{owner}/{repo}/
   - 避免重复克隆和解析
 
 - **AI 摘要缓存** - `data/ai-summaries/{slug}.json`
-  - 缓存 Kimi API 的摘要结果
+  - 缓存 AI 摘要结果（Kimi + DeepSeek 双引擎）
   - 延迟加载，后台异步生成
 
 - **Git 缓存** - `~/.claude/skills-repo/{owner}/{repo}/`
@@ -262,9 +264,63 @@ Git Clone/Pull → ~/.claude/skills-repo/{owner}/{repo}/
 }
 ```
 
+### POST `/api/install`
+
+安装或卸载单个 Skill（通过符号链接）。
+
+**请求体（安装）：**
+```json
+{
+  "action": "install",
+  "owner": "garrytan",
+  "repo": "gstack",
+  "filePath": "/Users/.../.claude/skills-repo/garrytan/gstack/review/SKILL.md",
+  "skillName": "review",
+  "level": "user",
+  "projectPath": "/path/to/project"
+}
+```
+
+**请求体（卸载）：**
+```json
+{
+  "action": "uninstall",
+  "skillName": "review",
+  "level": "user"
+}
+```
+
+**参数说明：**
+- `action` (必填) - `install` 或 `uninstall`
+- `skillName` (必填) - Skill 名称（仅允许 `[a-zA-Z0-9._-]`）
+- `level` (必填) - `user`（全局 `~/.claude/skills/`）或 `project`（指定项目目录）
+- `owner`, `repo`, `filePath` - 安装时必填，用于定位源目录
+- `projectPath` - Project 级安装/卸载时必填
+
+**响应（200）：**
+```json
+{
+  "success": true,
+  "path": "/Users/username/.claude/skills/review"
+}
+```
+
 ### GET `/api/install-status`
 
-检查 Claude Code 安装状态和链接情况。
+检查 Skill 安装状态。支持 skill 级和仓库级查询。
+
+**Skill 级查询参数：** `?skillName=review&projectPath=/path/to/project`
+
+**响应（200）：**
+```json
+{
+  "user": true,
+  "project": false,
+  "userPath": "/Users/username/.claude/skills/review"
+}
+```
+
+**仓库级查询参数（旧版）：** `?repo=owner/repo`
 
 **响应（200）：**
 ```json
@@ -288,17 +344,22 @@ Git Clone/Pull → ~/.claude/skills-repo/{owner}/{repo}/
 创建 `.env.local` 文件，配置以下变量：
 
 ```bash
-# Kimi API 配置（用于 AI 摘要）
+# Kimi API 配置（主引擎）
 KIMI_API_KEY=sk-your-api-key-here
 KIMI_BASE_URL=https://api.moonshot.cn/v1
+KIMI_MODEL=kimi-k2.5
+
+# DeepSeek API 配置（备用引擎，Kimi 失败时自动切换）
+DEEPSEEK_API_KEY=sk-your-deepseek-key-here
+DEEPSEEK_BASE_URL=https://api.deepseek.com/v1
+DEEPSEEK_MODEL=deepseek-chat
 ```
 
-**获取 Kimi API Key：**
-1. 访问 [Moonshot AI 控制台](https://console.moonshot.cn)
-2. 创建 API 密钥
-3. 复制到 `.env.local`
+**获取 API Key：**
+- **Kimi**: 访问 [Moonshot AI 控制台](https://console.moonshot.cn) 创建密钥
+- **DeepSeek**: 访问 [DeepSeek 控制台](https://platform.deepseek.com) 创建密钥
 
-如果不配置 API 密钥，AI 摘要功能将不可用，但仓库分析功能不受影响。
+配置任一即可使用 AI 摘要功能。双引擎自动 fallback：Kimi 失败时自动切换到 DeepSeek。如果都不配置，AI 摘要功能将不可用，但仓库分析功能不受影响。
 
 ## 类型定义
 
@@ -313,7 +374,7 @@ interface SkillInfo {
   allowedTools?: string[];                   // 允许的工具列表
   rawContent: string;                        // 原始内容
   filePath: string;                          // 源文件路径
-  source: "skill-md" | "claude-md" | "hooks" | "mcp" | "rule-md"; // 数据源
+  source: "skill-md" | "claude-md" | "hooks" | "mcp" | "rule-md" | "agent-md"; // 数据源
 }
 ```
 
@@ -327,6 +388,19 @@ interface RepoAnalysis {
   skills: SkillInfo[];                       // 技能列表
   analyzedAt: string;                        // ISO 时间戳
   skillCount: Record<SkillCategory, number>; // 各类型统计
+}
+```
+
+### SkillInstallStatus
+
+```typescript
+type SkillInstallLevel = "user" | "project";
+
+interface SkillInstallStatus {
+  user: boolean;                               // User 级是否已安装
+  project: boolean;                            // Project 级是否已安装
+  userPath?: string;                           // User 级符号链接路径
+  projectPath?: string;                        // Project 级符号链接路径
 }
 ```
 
@@ -352,7 +426,12 @@ interface RepoAnalysis {
 - **顺序**：Hooks (基础) → Commands (进阶) → Skills (核心) → MCP (扩展) → Agents (高级) → Rules (规范)
 - **理由**：符合认知阶梯、降低学习曲线、结构化导学
 
-### 6. 重新分析机制
+### 6. Skill 级安装
+- **设计**：通过符号链接按需安装单个 Skill，支持 User 级和 Project 级
+- **理由**：比仓库级安装粒度更细，用户可按需选择需要的 Skill
+- **安全**：skillName 正则校验、路径穿越防护、仅删除符号链接
+
+### 7. 重新分析机制
 - **设计**：支持 `force=true` 参数跳过缓存、拉取最新代码、清理陈旧摘要
 - **理由**：保证数据新鲜度、支持迭代开发、提高用户灵活性
 
