@@ -27,10 +27,10 @@ export function parseReadmeForAgents(repoPath: string): ReadmeAgentHint[] {
       }
     };
 
-    // Pattern 1: File path references like agents/foo.md
-    const pathRegex = /agents\/([\w.-]+\.md)/gi;
+    // Pattern 1: File path references like agents/foo.md or .claude/agents/foo.md
+    const pathRegex = /((?:[\w./-]*\/)?agents\/([\w.-]+\.md))/gi;
     for (const match of content.matchAll(pathRegex)) {
-      addHint({ filePath: `agents/${match[1]}`, name: match[1].replace(/\.md$/, "") });
+      addHint({ filePath: match[1], name: match[2].replace(/\.md$/, "") });
     }
 
     // Pattern 2: Table rows with "agent" type: | name | agent |
