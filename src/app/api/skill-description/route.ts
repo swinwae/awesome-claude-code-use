@@ -4,7 +4,7 @@ import {
   getCachedSkillDescription,
   saveSkillDescription,
 } from "@/lib/cache";
-import { generateSkillDescription } from "@/lib/kimi";
+import { generateSkillDescription } from "@/lib/ai-client";
 
 export async function POST(request: Request) {
   try {

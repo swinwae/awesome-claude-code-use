@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getCachedAnalysis, getCachedAiSummary, saveAiSummary } from "@/lib/cache";
-import { generateAiSummary } from "@/lib/kimi";
+import { generateAiSummary } from "@/lib/ai-client";
 
 export async function POST(request: Request) {
   try {
