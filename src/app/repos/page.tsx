@@ -4,6 +4,8 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import type { RepoEntry, SkillCategory } from "@/types";
 
+const BASE_PATH = process.env.NEXT_PUBLIC_BASE_PATH || "";
+
 export default function ReposPage() {
   const [repos, setRepos] = useState<RepoEntry[]>([]);
   const [loading, setLoading] = useState(true);
@@ -11,7 +13,7 @@ export default function ReposPage() {
   const [filter, setFilter] = useState<SkillCategory | "all">("all");
 
   useEffect(() => {
-    fetch("/api/repos")
+    fetch(`${BASE_PATH}/api/repos`)
       .then((r) => r.json())
       .then((data) => {
         if (Array.isArray(data)) setRepos(data);

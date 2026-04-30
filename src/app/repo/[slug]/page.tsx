@@ -5,6 +5,8 @@ import Link from "next/link";
 import { SkillAccordion } from "@/components/SkillAccordion";
 import type { RepoAnalysis, AiSummary, SkillCategory, InstallStatus } from "@/types";
 
+const BASE_PATH = process.env.NEXT_PUBLIC_BASE_PATH || "";
+
 export default function RepoDetailPage({
   params,
 }: {
@@ -23,11 +25,11 @@ export default function RepoDetailPage({
 
   useEffect(() => {
     // Load analysis
-    fetch(`/api/repos`)
+    fetch(`${BASE_PATH}/api/repos`)
       .then((r) => r.json())
       .then(async () => {
         // We need the full analysis, load it
-        const res = await fetch("/api/analyze", {
+        const res = await fetch(`${BASE_PATH}/api/analyze`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ address: slug.replace("-", "/") }),
@@ -41,7 +43,7 @@ export default function RepoDetailPage({
 
     // Load AI summary
     setAiLoading(true);
-    fetch("/api/ai-summary", {
+    fetch(`${BASE_PATH}/api/ai-summary`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ slug }),
@@ -55,7 +57,7 @@ export default function RepoDetailPage({
       .finally(() => setAiLoading(false));
 
     // Check install status
-    fetch(`/api/install-status?repo=${slug.replace("-", "/")}`)
+    fetch(`${BASE_PATH}/api/install-status?repo=${slug.replace("-", "/")}`)
       .then((r) => r.json())
       .then(setInstallStatus)
       .catch(() => {});
@@ -113,7 +115,7 @@ export default function RepoDetailPage({
               setReanalyzing(true);
               setError("");
               try {
-                const res = await fetch("/api/analyze", {
+                const res = await fetch(`${BASE_PATH}/api/analyze`, {
                   method: "POST",
                   headers: { "Content-Type": "application/json" },
                   body: JSON.stringify({ address: slug.replace("-", "/"), force: true }),
@@ -124,7 +126,7 @@ export default function RepoDetailPage({
                 // Refresh AI summary
                 setAiSummary(null);
                 setAiLoading(true);
-                fetch("/api/ai-summary", {
+                fetch(`${BASE_PATH}/api/ai-summary`, {
                   method: "POST",
                   headers: { "Content-Type": "application/json" },
                   body: JSON.stringify({ slug }),
@@ -187,7 +189,7 @@ export default function RepoDetailPage({
               onClick={() => {
                 setAiError("");
                 setAiLoading(true);
-                fetch("/api/ai-summary", {
+                fetch(`${BASE_PATH}/api/ai-summary`, {
                   method: "POST",
                   headers: { "Content-Type": "application/json" },
                   body: JSON.stringify({ slug }),

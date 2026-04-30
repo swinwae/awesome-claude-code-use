@@ -3,6 +3,8 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import type { SkillInfo, SkillAiDescription, SkillInstallStatus } from "@/types";
 
+const BASE_PATH = process.env.NEXT_PUBLIC_BASE_PATH || "";
+
 const CATEGORY_LABELS: Record<string, string> = {
   skill: "Skill",
   hook: "Hook",
@@ -31,7 +33,7 @@ export function SkillAccordion({
     setDescLoading(true);
     setDescError("");
 
-    fetch("/api/skill-description", {
+    fetch(`${BASE_PATH}/api/skill-description`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ slug, skillName: skill.name }),
@@ -222,7 +224,7 @@ function SkillInstallSection({
   const fetchStatus = useCallback(() => {
     const controller = new AbortController();
     setLoading(true);
-    fetch(`/api/install-status?skillName=${encodeURIComponent(skillName)}`, {
+    fetch(`${BASE_PATH}/api/install-status?skillName=${encodeURIComponent(skillName)}`, {
       signal: controller.signal,
     })
       .then((r) => r.json())
@@ -243,7 +245,7 @@ function SkillInstallSection({
     setActionLoading(level);
     setError("");
     try {
-      const res = await fetch("/api/install", {
+      const res = await fetch(`${BASE_PATH}/api/install`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -278,7 +280,7 @@ function SkillInstallSection({
     setActionLoading(`un-${level}`);
     setError("");
     try {
-      const res = await fetch("/api/install", {
+      const res = await fetch(`${BASE_PATH}/api/install`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
