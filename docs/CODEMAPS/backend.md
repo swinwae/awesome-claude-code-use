@@ -40,7 +40,8 @@ deduplicate by skill.name → saveAnalysis() → return
 ```
 callWithFallback(prompt)
   ├─ Try DeepSeek (DEEPSEEK_API_KEY, 30s timeout)
-  └─ Fallback: Try Kimi (KIMI_API_KEY, 30s timeout)
+  ├─ Fallback: Try Kimi (KIMI_API_KEY, 30s timeout)
+  └─ Fallback: Try GLM (GLM_API_KEY, 30s timeout)
   ↓
 parseJsonResponse() → strip markdown fences → JSON.parse
 ```

@@ -30,6 +30,15 @@ function getProviders(): AiProvider[] {
     });
   }
 
+  if (process.env.GLM_API_KEY) {
+    providers.push({
+      name: "GLM",
+      apiKey: process.env.GLM_API_KEY,
+      baseUrl: process.env.GLM_BASE_URL || "https://open.bigmodel.cn/api/coding/paas/v4",
+      model: process.env.GLM_MODEL || "glm-4.7",
+    });
+  }
+
   return providers;
 }
 
@@ -78,7 +87,7 @@ async function callWithFallback(prompt: string): Promise<string> {
   const providers = getProviders();
 
   if (providers.length === 0) {
-    throw new Error("未配置任何 AI 提供商（需要 KIMI_API_KEY 或 DEEPSEEK_API_KEY）");
+    throw new Error("未配置任何 AI 提供商（需要 KIMI_API_KEY、DEEPSEEK_API_KEY 或 GLM_API_KEY）");
   }
 
   const errors: string[] = [];
