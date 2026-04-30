@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import type { RepoEntry } from "@/types";
 
+const BASE_PATH = process.env.NEXT_PUBLIC_BASE_PATH || "";
+
 const EXAMPLES = ["garrytan/gstack", "anthropics/prompt-eng-interactive-tutorial"];
 
 const LEARNING_PATH = [
@@ -25,7 +27,7 @@ export default function HomePage() {
   const [recentRepos, setRecentRepos] = useState<RepoEntry[]>([]);
 
   useEffect(() => {
-    fetch("/api/repos")
+    fetch(`${BASE_PATH}/api/repos`)
       .then((r) => r.json())
       .then((data) => {
         if (Array.isArray(data)) setRecentRepos(data.slice(-3).reverse());
@@ -50,7 +52,7 @@ export default function HomePage() {
 
     try {
       setStep(1); // 克隆中
-      const res = await fetch("/api/analyze", {
+      const res = await fetch(`${BASE_PATH}/api/analyze`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ address: trimmed, force: forceReanalyze || undefined }),
@@ -65,7 +67,7 @@ export default function HomePage() {
       const data = await res.json();
 
       // Trigger AI summary in background
-      fetch("/api/ai-summary", {
+      fetch(`${BASE_PATH}/api/ai-summary`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ slug: data.analysis.slug }),
@@ -210,7 +212,7 @@ export default function HomePage() {
                     setLoading(true);
                     setStep(1);
                     try {
-                      const res = await fetch("/api/analyze", {
+                      const res = await fetch(`${BASE_PATH}/api/analyze`, {
                         method: "POST",
                         headers: { "Content-Type": "application/json" },
                         body: JSON.stringify({ address: `${repo.owner}/${repo.repo}`, force: true }),
@@ -221,7 +223,7 @@ export default function HomePage() {
                       }
                       setStep(3);
                       const data = await res.json();
-                      fetch("/api/ai-summary", {
+                      fetch(`${BASE_PATH}/api/ai-summary`, {
                         method: "POST",
                         headers: { "Content-Type": "application/json" },
                         body: JSON.stringify({ slug: data.analysis.slug }),

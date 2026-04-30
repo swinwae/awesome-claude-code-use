@@ -5,6 +5,8 @@ import Link from "next/link";
 import { SkillAccordion } from "@/components/SkillAccordion";
 import type { RepoAnalysis, SkillInfo, SkillCategory } from "@/types";
 
+const BASE_PATH = process.env.NEXT_PUBLIC_BASE_PATH || "";
+
 const CATEGORIES: {
   key: SkillCategory;
   name: string;
@@ -173,13 +175,13 @@ export default function LearnCategoryPage({
 
   useEffect(() => {
     // Load all analyzed repos and collect skills of this category
-    fetch("/api/repos")
+    fetch(`${BASE_PATH}/api/repos`)
       .then((r) => r.json())
       .then(async (repos: { slug: string }[]) => {
         const allSkills: { skill: SkillInfo; slug: string }[] = [];
         for (const repo of repos) {
           try {
-            const res = await fetch("/api/analyze", {
+            const res = await fetch(`${BASE_PATH}/api/analyze`, {
               method: "POST",
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({
