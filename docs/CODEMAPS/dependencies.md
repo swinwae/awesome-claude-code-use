@@ -9,6 +9,7 @@
 | GitHub | Git clone repos | Public repos only, no auth |
 | Kimi (Moonshot AI) | AI summaries, skill descriptions | KIMI_API_KEY, KIMI_BASE_URL |
 | DeepSeek | Fallback AI provider | DEEPSEEK_API_KEY, DEEPSEEK_BASE_URL |
+| 智谱 GLM (BigModel) | Additional fallback AI provider | GLM_API_KEY, GLM_BASE_URL |
 
 ## Runtime Dependencies
 
@@ -41,7 +42,7 @@
 
 ## AI API Format
 
-Both providers use OpenAI-compatible chat completions API:
+All three providers use OpenAI-compatible chat completions API:
 ```
 POST {BASE_URL}/chat/completions
 Authorization: Bearer {API_KEY}

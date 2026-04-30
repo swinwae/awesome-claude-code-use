@@ -23,7 +23,7 @@ Claude Code 技能可视化学习平台。一个现代化的 Web 应用，用于
   curl -fsSL https://bun.sh/install | bash
   ```
 - **Git** - 用于克隆分析的仓库
-- **KIMI_API_KEY / DEEPSEEK_API_KEY** - 用于 AI 摘要功能（可选，没有 API 密钥时功能降级）
+- **KIMI_API_KEY / DEEPSEEK_API_KEY / GLM_API_KEY** - 用于 AI 摘要功能（可选，没有 API 密钥时功能降级）
 
 ### 安装与运行
 
@@ -356,13 +356,19 @@ KIMI_MODEL=kimi-k2.5
 DEEPSEEK_API_KEY=sk-your-deepseek-key-here
 DEEPSEEK_BASE_URL=https://api.deepseek.com/v1
 DEEPSEEK_MODEL=deepseek-chat
+
+# 智谱 GLM API 配置（额外备用引擎）
+GLM_API_KEY=your-glm-api-key-here
+GLM_BASE_URL=https://open.bigmodel.cn/api/coding/paas/v4
+GLM_MODEL=glm-4.7
 ```
 
 **获取 API Key：**
 - **Kimi**: 访问 [Moonshot AI 控制台](https://console.moonshot.cn) 创建密钥
 - **DeepSeek**: 访问 [DeepSeek 控制台](https://platform.deepseek.com) 创建密钥
+- **GLM**: 访问 [智谱开放平台](https://open.bigmodel.cn) 创建密钥
 
-配置任一即可使用 AI 摘要功能。双引擎自动 fallback：Kimi 失败时自动切换到 DeepSeek。如果都不配置，AI 摘要功能将不可用，但仓库分析功能不受影响。
+配置任一即可使用 AI 摘要功能。三引擎自动 fallback：DeepSeek → Kimi → GLM。如果都不配置，AI 摘要功能将不可用，但仓库分析功能不受影响。
 
 ## 类型定义
 
@@ -506,7 +512,7 @@ skills.push(...parseCustomFormat(filePath));
 
 ### Q: AI 摘要不生成？
 **A:** 检查：
-1. `.env.local` 中是否正确配置了 `KIMI_API_KEY`
+1. `.env.local` 中是否至少配置了 `KIMI_API_KEY`、`DEEPSEEK_API_KEY`、`GLM_API_KEY` 之一
 2. API 配额是否充足
 3. 网络连接是否正常
 

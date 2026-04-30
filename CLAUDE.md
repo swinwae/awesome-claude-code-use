@@ -6,7 +6,7 @@ Claude Code 技能可视化学习平台。
 - Next.js 15 (App Router) + React 19 + TypeScript
 - Tailwind CSS v4 (暗色优先)
 - Bun runtime
-- AI 摘要双引擎：Kimi (moonshot-v1-8k) + DeepSeek (deepseek-chat)，自动 fallback
+- AI 摘要三引擎：DeepSeek (deepseek-chat) + Kimi (moonshot-v1-8k) + GLM (glm-4.7)，自动 fallback
 - shiki 用于服务端代码高亮
 - JSON 文件缓存（无 DB）
 
@@ -18,7 +18,7 @@ Claude Code 技能可视化学习平台。
   - `learn/[category]/page.tsx` - 学习路径页面（支持 rule 类型）
   - `repo/[slug]/page.tsx` - 仓库详情页（含重新分析按钮）
 - `src/lib/` - 核心库（解析器、缓存、AI 客户端、安装检测）
-  - `ai-client.ts` - AI 多引擎客户端（Kimi + DeepSeek fallback）
+  - `ai-client.ts` - AI 多引擎客户端（DeepSeek + Kimi + GLM fallback）
   - `install.ts` - Skill 级安装/卸载/状态检测（符号链接方式）
   - `analyzer/` - 仓库分析引擎
     - `git.ts` - Git 操作（`cloneRepo`、`pullRepo`）
