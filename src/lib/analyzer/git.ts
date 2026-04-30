@@ -30,9 +30,11 @@ export async function pullRepo(
     return cloneRepo(owner, repo);
   }
 
+  const proxyArg = process.env.GIT_PROXY ? `-c http.proxy=${process.env.GIT_PROXY}` : "";
+
   return new Promise((resolve, reject) => {
     exec(
-      `git -C "${localPath}" pull --ff-only`,
+      `git ${proxyArg} -C "${localPath}" pull --ff-only`,
       { timeout: 30_000 },
       (error) => {
         if (error) {
@@ -62,10 +64,11 @@ export async function cloneRepo(
   }
 
   const url = `https://github.com/${owner}/${repo}.git`;
+  const proxyArg = process.env.GIT_PROXY ? `-c http.proxy=${process.env.GIT_PROXY}` : "";
 
   return new Promise((resolve, reject) => {
     const child = exec(
-      `git -c http.proxy=http://127.0.0.1:7890 clone --depth=1 --single-branch --no-tags "${url}" "${localPath}"`,
+      `git ${proxyArg} clone --depth=1 --single-branch --no-tags "${url}" "${localPath}"`,
       { timeout: CLONE_TIMEOUT_MS },
       (error, _stdout, stderr) => {
         if (error) {
